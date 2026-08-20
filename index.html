@@ -1,2 +1,420 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Manual Day Clock"><meta name="apple-mobile-web-app-status-bar-style" content="black"><title>Manual Calendar Clock</title><script src="https://cdn.jsdelivr.net/npm/nosleep.js@0.12.0/dist/NoSleep.min.js"></script><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#050505;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-user-select:none;user-select:none;-webkit-text-size-adjust:100%}body.light{background:#f7f7f7;color:#111}body.dim{background:#000;color:#d8d8d8}body.off{background:#000;color:#111}#screen{width:100vw;height:100vh;box-sizing:border-box;padding:4vh 5.5vw 3.5vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.topText{font-size:7.2vw;line-height:1;font-weight:800;letter-spacing:.06em;opacity:.92;text-transform:uppercase;margin-bottom:1.8vh}.dayPeriod{font-size:10.7vw;line-height:1.02;font-weight:900;letter-spacing:.015em;text-transform:uppercase;margin-bottom:2.8vh}.timeLine{font-size:18vw;line-height:.88;font-weight:900;letter-spacing:.01em;white-space:nowrap;margin-bottom:3.2vh}.ampm{display:inline-block;font-size:5.8vw;line-height:1;font-weight:900;vertical-align:baseline;margin-left:1vw;opacity:.96}.dateLine{font-size:7vw;line-height:1.12;font-weight:800;letter-spacing:.02em;text-transform:uppercase;margin-bottom:1.4vh}.fullDateLine{font-size:4.1vw;line-height:1.1;font-weight:700;letter-spacing:.02em;opacity:.82;text-transform:uppercase}.panel{position:fixed;left:0;right:0;bottom:1.3vh;display:flex;gap:1.5vw;justify-content:center;align-items:center;flex-wrap:wrap;padding:0 2vw}button{font-size:2.7vw;font-weight:800;border:0;border-radius:1.2vw;padding:1.1vh 2.1vw;background:#fff;color:#111}.status{position:fixed;top:1.3vh;left:0;right:0;font-size:2.4vw;font-weight:700;opacity:.45;text-align:center;padding:0 2vw}.offMessage{font-size:4.2vw;font-weight:800;opacity:.16;letter-spacing:.04em;text-transform:uppercase;line-height:1.35}.hidden{display:none!important}@media(orientation:landscape){#screen{padding:2.8vh 6vw 3vh}.topText{font-size:4vw;margin-bottom:1vh}.dayPeriod{font-size:6.6vw;margin-bottom:2vh}.timeLine{font-size:11.4vw;margin-bottom:2.3vh}.ampm{font-size:3.6vw;margin-left:.6vw}.dateLine{font-size:4.4vw;margin-bottom:.8vh}.fullDateLine{font-size:2.6vw}.panel{bottom:1.1vh}.status{font-size:1.35vw}button{font-size:1.45vw;border-radius:.65vw;padding:.9vh 1.3vw}.offMessage{font-size:2.3vw}}</style></head><body class="off"><div id="screen"><div id="topText" class="topText hidden">NOW IT'S</div><div id="dayPeriod" class="dayPeriod hidden">SATURDAY AFTERNOON</div><div id="timeLine" class="timeLine hidden">03:42<span class="ampm">PM</span></div><div id="dateLine" class="dateLine hidden">15 AUGUST 2026</div><div id="fullDateLine" class="fullDateLine hidden">SATURDAY, 15 AUGUST 2026</div><div id="offMessage" class="offMessage">Tap a session<br>to start clock</div></div><div id="status" class="status">Manual clock mode</div><div id="panel" class="panel"><button onclick="startMinutes(60)">School 1h</button><button onclick="startUntil('22:00')">Till 10 PM</button><button onclick="startUntil('01:30')">Till 1:30 AM</button><button onclick="startMinutes(30)">30 min</button><button onclick="stopSession()">Stop</button></div><script>(function(){var dayNames=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],monthNames=["January","February","March","April","May","June","July","August","September","October","November","December"];var updateTimer=null,endTimer=null,sessionEnd=0,wakeLock=null,noSleep=null,wakeStatus="not started";try{if(window.NoSleep){noSleep=new NoSleep()}}catch(e){noSleep=null}function pad2(n){return n<10?"0"+n:""+n}function getPeriod(h){if(h>=5&&h<12)return"Morning";if(h>=12&&h<17)return"Afternoon";if(h>=17&&h<21)return"Evening";if(h>=21&&h<24)return"Night";return"Before Dawn"}function show(id,yes){var el=document.getElementById(id);if(yes)el.className=el.className.replace(" hidden","");else if(el.className.indexOf("hidden")<0)el.className+=" hidden"}function setClockVisible(yes){show("topText",yes);show("dayPeriod",yes);show("timeLine",yes);show("dateLine",yes);show("fullDateLine",yes);show("offMessage",!yes);document.body.className=yes?"":"off"}function applyTheme(h){if(Date.now()>=sessionEnd){document.body.className="off";return}if(h>=7&&h<18){document.body.className="light"}else if(h>=21||h<5){document.body.className="dim"}else{document.body.className=""}}async function enableWake(){wakeStatus="requested";try{if(navigator.wakeLock&&navigator.wakeLock.request){wakeLock=await navigator.wakeLock.request("screen");wakeStatus="native wake lock";return}}catch(e){}try{if(noSleep){noSleep.enable();wakeStatus="NoSleep fallback";return}}catch(e2){}wakeStatus="not supported"}function disableWake(){try{if(wakeLock&&wakeLock.release)wakeLock.release()}catch(e){}wakeLock=null;try{if(noSleep)noSleep.disable()}catch(e2){}wakeStatus="off"}function remainingText(){var ms=sessionEnd-Date.now();if(ms<=0)return"ending";var totalMin=Math.ceil(ms/60000),h=Math.floor(totalMin/60),m=totalMin%60;return h>0?h+"h "+m+"m remaining":m+"m remaining"}function updateClock(){if(Date.now()>=sessionEnd){stopSession();return}var now=new Date(),h=now.getHours(),m=now.getMinutes(),s=now.getSeconds();var h12=h%12;if(h12===0)h12=12;var ampm=h>=12?"PM":"AM";var day=dayNames[now.getDay()],month=monthNames[now.getMonth()],date=now.getDate(),year=now.getFullYear(),period=getPeriod(h);document.getElementById("dayPeriod").innerHTML=(day+" "+period).toUpperCase();document.getElementById("timeLine").innerHTML=pad2(h12)+":"+pad2(m)+'<span class="ampm">'+ampm+"</span>";document.getElementById("dateLine").innerHTML=(date+" "+month+" "+year).toUpperCase();document.getElementById("fullDateLine").innerHTML=(day+", "+date+" "+month+" "+year).toUpperCase();document.getElementById("status").innerHTML="Clock ON • "+remainingText()+" • keep-awake: "+wakeStatus;applyTheme(h);clearTimeout(updateTimer);updateTimer=setTimeout(updateClock,((60-s)*1000)+150)}window.startMinutes=async function(mins){clearTimeout(endTimer);clearTimeout(updateTimer);sessionEnd=Date.now()+mins*60000;setClockVisible(true);await enableWake();updateClock();endTimer=setTimeout(stopSession,mins*60000)};window.startUntil=async function(hhmm){var now=new Date(),p=hhmm.split(":"),end=new Date(now.getFullYear(),now.getMonth(),now.getDate(),parseInt(p[0],10),parseInt(p[1],10),0,0);if(end.getTime()<=now.getTime())end.setDate(end.getDate()+1);var mins=Math.max(1,Math.ceil((end.getTime()-now.getTime())/60000));window.startMinutes(mins)};window.stopSession=function(){clearTimeout(endTimer);clearTimeout(updateTimer);sessionEnd=0;disableWake();setClockVisible(false);document.getElementById("status").innerHTML="Clock stopped • iPad can auto-lock now"};document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible"&&Date.now()<sessionEnd)updateClock()})})();</script></body></html>
+
+<html lang="en">
+<head>
+  <meta name="generator" content="HTML Tidy for Mac OS X (vers 31 October 2006 - Apple Inc. build 13646), see www.w3.org">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Manual Day Clock">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+  <title>Manual Calendar Clock</title>
+  <script src="https://cdn.jsdelivr.net/npm/nosleep.js@0.12.0/dist/NoSleep.min.js" type="text/javascript">
+</script>
+  <style type="text/css">
+    html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #050505;
+        color: #fff;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-text-size-adjust: 100%;
+      }
+      body.off {
+        background: #000;
+        color: #fff;
+      }
+      #screen {
+        width: 100vw;
+        height: 100vh;
+        box-sizing: border-box;
+        padding: 4vh 5.5vw 3.5vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      .topText {
+        font-size: 7.2vw;
+        line-height: 1;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        opacity: 0.92;
+        text-transform: uppercase;
+        margin-bottom: 1.8vh;
+      }
+      .dayPeriod {
+        font-size: 10.7vw;
+        line-height: 1.02;
+        font-weight: 900;
+        letter-spacing: 0.015em;
+        text-transform: uppercase;
+        margin-bottom: 2.8vh;
+      }
+      .timeLine {
+        font-size: 18vw;
+        line-height: 0.88;
+        font-weight: 900;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        margin-bottom: 3.2vh;
+      }
+      .ampm {
+        display: inline-block;
+        font-size: 5.8vw;
+        line-height: 1;
+        font-weight: 900;
+        vertical-align: baseline;
+        margin-left: 1vw;
+        opacity: 0.96;
+      }
+      .dateLine {
+        font-size: 7vw;
+        line-height: 1.12;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        margin-bottom: 1.4vh;
+      }
+      .fullDateLine {
+        font-size: 4.1vw;
+        line-height: 1.1;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        opacity: 0.82;
+        text-transform: uppercase;
+      }
+      .panel {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 1.3vh;
+        display: flex;
+        gap: 1.5vw;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 0 2vw;
+      }
+      button {
+        font-size: 2.7vw;
+        font-weight: 800;
+        border: 1px solid #fff;
+        border-radius: 1.2vw;
+        padding: 1.1vh 2.1vw;
+        background: #111;
+        color: #fff;
+      }
+      .status {
+        position: fixed;
+        top: 1.3vh;
+        left: 0;
+        right: 0;
+        font-size: 2.4vw;
+        font-weight: 700;
+        opacity: 0.45;
+        text-align: center;
+        padding: 0 2vw;
+      }
+      .offMessage {
+        font-size: 4.2vw;
+        font-weight: 800;
+        opacity: 0.16;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        line-height: 1.35;
+      }
+      .hidden {
+        display: none !important;
+      }
+      @media (orientation: landscape) {
+        #screen {
+          padding: 2.8vh 6vw 3vh;
+        }
+        .topText {
+          font-size: 4vw;
+          margin-bottom: 1vh;
+        }
+        .dayPeriod {
+          font-size: 6.6vw;
+          margin-bottom: 2vh;
+        }
+        .timeLine {
+          font-size: 11.4vw;
+          margin-bottom: 2.3vh;
+        }
+        .ampm {
+          font-size: 3.6vw;
+          margin-left: 0.6vw;
+        }
+        .dateLine {
+          font-size: 4.4vw;
+          margin-bottom: 0.8vh;
+        }
+        .fullDateLine {
+          font-size: 2.6vw;
+        }
+        .panel {
+          bottom: 1.1vh;
+        }
+        .status {
+          font-size: 1.35vw;
+        }
+        button {
+          font-size: 1.45vw;
+          border-radius: 0.65vw;
+          padding: 0.9vh 1.3vw;
+        }
+        .offMessage {
+          font-size: 2.3vw;
+        }
+      }
+  </style>
+</head>
+
+<body class="off">
+  <div id="screen">
+    <div id="topText" class="topText hidden">
+      NOW IT'S
+    </div>
+
+    <div id="dayPeriod" class="dayPeriod hidden">
+      SATURDAY AFTERNOON
+    </div>
+
+    <div id="timeLine" class="timeLine hidden">
+      03:42<span class="ampm">PM</span>
+    </div>
+
+    <div id="dateLine" class="dateLine hidden">
+      15 AUGUST 2026
+    </div>
+
+    <div id="fullDateLine" class="fullDateLine hidden">
+      SATURDAY, 15 AUGUST 2026
+    </div>
+
+    <div id="offMessage" class="offMessage">
+      Tap a session<br>
+      to start clock
+    </div>
+  </div>
+
+  <div id="status" class="status">
+    Manual clock mode
+  </div>
+
+  <div id="panel" class="panel">
+    <button onclick="startMinutes(60)">School 1h</button><button onclick="startUntil('22:00')">Till 10 PM</button><button onclick="startUntil('01:30')">Till 1:30 AM</button><button onclick="startMinutes(30)">30 min</button><button onclick="stopSession()">Stop</button>
+  </div><script type="text/javascript">
+    (function () {
+        var dayNames = [
+            "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+          ],
+          monthNames = [
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
+          ];
+        var updateTimer = null,
+          endTimer = null,
+          sessionEnd = 0,
+          wakeLock = null,
+          noSleep = null,
+          wakeStatus = "not started";
+        try {
+          if (window.NoSleep) {
+            noSleep = new NoSleep();
+          }
+        } catch (e) {
+          noSleep = null;
+        }
+        function pad2(n) {
+          return n < 10 ? "0" + n : "" + n;
+        }
+        function getPeriod(h) {
+          if (h >= 5 && h < 12) return "Morning";
+          if (h >= 12 && h < 17) return "Afternoon";
+          if (h >= 17 && h < 21) return "Evening";
+          if (h >= 21 && h < 24) return "Night";
+          return "Before Dawn";
+        }
+        function show(id, yes) {
+          var el = document.getElementById(id);
+          if (yes) el.className = el.className.replace(" hidden", "");
+          else if (el.className.indexOf("hidden") < 0)
+            el.className += " hidden";
+        }
+        function setClockVisible(yes) {
+          show("topText", yes);
+          show("dayPeriod", yes);
+          show("timeLine", yes);
+          show("dateLine", yes);
+          show("fullDateLine", yes);
+          show("offMessage", !yes);
+          document.body.className = yes ? "" : "off";
+        }
+        function applyTheme() {
+          if (Date.now() >= sessionEnd) {
+            document.body.className = "off";
+            return;
+          }
+          document.body.className = "";
+        }
+        async function enableWake() {
+          wakeStatus = "requested";
+          try {
+            if (navigator.wakeLock && navigator.wakeLock.request) {
+              wakeLock = await navigator.wakeLock.request("screen");
+              wakeStatus = "native wake lock";
+              return;
+            }
+          } catch (e) {}
+          try {
+            if (noSleep) {
+              noSleep.enable();
+              wakeStatus = "NoSleep fallback";
+              return;
+            }
+          } catch (e2) {}
+          wakeStatus = "not supported";
+        }
+        function disableWake() {
+          try {
+            if (wakeLock && wakeLock.release) wakeLock.release();
+          } catch (e) {}
+          wakeLock = null;
+          try {
+            if (noSleep) noSleep.disable();
+          } catch (e2) {}
+          wakeStatus = "off";
+        }
+        function remainingText() {
+          var ms = sessionEnd - Date.now();
+          if (ms <= 0) return "ending";
+          var totalMin = Math.ceil(ms / 60000),
+            h = Math.floor(totalMin / 60),
+            m = totalMin % 60;
+          return h > 0 ? h + "h " + m + "m remaining" : m + "m remaining";
+        }
+        function updateClock() {
+          if (Date.now() >= sessionEnd) {
+            stopSession();
+            return;
+          }
+          var now = new Date(),
+            h = now.getHours(),
+            m = now.getMinutes(),
+            s = now.getSeconds();
+          var h12 = h % 12;
+          if (h12 === 0) h12 = 12;
+          var ampm = h >= 12 ? "PM" : "AM";
+          var day = dayNames[now.getDay()],
+            month = monthNames[now.getMonth()],
+            date = now.getDate(),
+            year = now.getFullYear(),
+            period = getPeriod(h);
+          document.getElementById("dayPeriod").innerHTML = (
+            day +
+            " " +
+            period
+          ).toUpperCase();
+          document.getElementById("timeLine").innerHTML =
+            pad2(h12) +
+            ":" +
+            pad2(m) +
+            '<span class="ampm">' +
+            ampm +
+            "<\/span>";
+          document.getElementById("dateLine").innerHTML = (
+            date +
+            " " +
+            month +
+            " " +
+            year
+          ).toUpperCase();
+          document.getElementById("fullDateLine").innerHTML = (
+            day +
+            ", " +
+            date +
+            " " +
+            month +
+            " " +
+            year
+          ).toUpperCase();
+          document.getElementById("status").innerHTML =
+            "Clock ON ⬢ " + remainingText() + " ⬢ keep-awake: " + wakeStatus;
+          applyTheme();
+          clearTimeout(updateTimer);
+          updateTimer = setTimeout(updateClock, (60 - s) * 1000 + 150);
+        }
+        window.startMinutes = async function (mins) {
+          clearTimeout(endTimer);
+          clearTimeout(updateTimer);
+          sessionEnd = Date.now() + mins * 60000;
+          setClockVisible(true);
+          await enableWake();
+          updateClock();
+          endTimer = setTimeout(stopSession, mins * 60000);
+        };
+        window.startUntil = async function (hhmm) {
+          var now = new Date(),
+            p = hhmm.split(":"),
+            end = new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              now.getDate(),
+              parseInt(p[0], 10),
+              parseInt(p[1], 10),
+              0,
+              0,
+            );
+          if (end.getTime() <= now.getTime()) end.setDate(end.getDate() + 1);
+          var mins = Math.max(
+            1,
+            Math.ceil((end.getTime() - now.getTime()) / 60000),
+          );
+          window.startMinutes(mins);
+        };
+        window.stopSession = function () {
+          clearTimeout(endTimer);
+          clearTimeout(updateTimer);
+          sessionEnd = 0;
+          disableWake();
+          setClockVisible(false);
+          document.getElementById("status").innerHTML =
+            "Clock stopped ⬢ iPad can auto-lock now";
+        };
+        document.addEventListener("visibilitychange", function () {
+          if (document.visibilityState === "visible" && Date.now() < sessionEnd)
+            updateClock();
+        });
+      })();
+  </script>
+</body>
+</html>
