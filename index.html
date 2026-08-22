@@ -436,8 +436,7 @@
   <div id="photoLayer" class="hidden" aria-live="polite"></div>
   <script type="text/javascript">
     (function () {
-      var clientId = "31995329705-vggjceajqd5nvf63dj0mub17dl6aq2bc.apps.googleusercontent.com";
-      var scope = "https://www.googleapis.com/auth/photospicker.mediaitems.readonly";
+      var workerUrl = "https://day-clock-google-oauth.georgearun231981.workers.dev";
       var accessToken = null;
       var photoItems = [];
       var photoIndex = 0;
@@ -520,33 +519,24 @@
           setPhotoStatus("Photos OFF");
           return;
         }
-        var pickerWindow = window.open("about:blank", "_blank");
-        if (!pickerWindow) {
-          setPhotoStatus("Allow pop-ups to choose photos");
+        if (!accessToken) {
+          setPhotoStatus("Opening Google sign-in…");
+          window.location.href = workerUrl + "/oauth/start";
           return;
         }
-        if (!window.google || !google.accounts || !google.accounts.oauth2) {
-          pickerWindow.close();
-          setPhotoStatus("Google sign-in is still loading");
-          return;
-        }
-        var tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: scope,
-          callback: function (response) {
-            if (response.error || !response.access_token) {
-              pickerWindow.close();
-              setPhotoStatus("Google sign-in was cancelled or blocked");
-              return;
-            }
-            startPicker(response.access_token, pickerWindow).catch(function (error) {
-              pickerWindow.close();
-              setPhotoStatus("Photos unavailable • " + error.message);
-            });
-          },
+        startPicker(accessToken, window).catch(function (error) {
+          setPhotoStatus("Photos unavailable • " + error.message);
         });
-        tokenClient.requestAccessToken();
       };
+
+      var returnedToken = new URLSearchParams(window.location.hash.slice(1)).get("access_token");
+      if (returnedToken) {
+        accessToken = returnedToken;
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        startPicker(accessToken, window).catch(function (error) {
+          setPhotoStatus("Photos unavailable • " + error.message);
+        });
+      }
     })();
   </script>
 </body>
