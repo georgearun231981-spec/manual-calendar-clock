@@ -177,6 +177,13 @@
         padding: 0.7rem 1rem;
         border-radius: 0.5rem;
       }
+      #localPhotoButton {
+        position: fixed;
+        top: 15vh;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 3;
+      }
       @media (orientation: landscape) {
         #screen {
           padding: 27vh 6vw 3vh;
@@ -251,6 +258,8 @@
   </div>
 
   <button id="photoButton" onclick="togglePhotos()">Photos</button>
+  <button id="localPhotoButton" onclick="document.getElementById('localPhotoInput').click()">Local Photos</button>
+  <input id="localPhotoInput" class="hidden" type="file" accept="image/*" multiple onchange="showLocalPhotos(this.files)">
   <a id="pickerLink" class="hidden" target="_blank" rel="noopener">Open Google Photos Picker</a>
 
   <div id="panel" class="panel">
@@ -454,6 +463,7 @@
       var photoIndex = 0;
       var photoTimer = null;
       var photoObjectUrl = null;
+      var localPhotoUrls = [];
 
       function setPhotoStatus(message) {
         document.getElementById("status").innerHTML = message;
@@ -542,6 +552,23 @@
         startPicker(accessToken, window).catch(function (error) {
           setPhotoStatus("Photos unavailable • " + error.message);
         });
+      };
+
+      window.showLocalPhotos = function (files) {
+        if (!files || !files.length) return;
+        clearInterval(photoTimer);
+        localPhotoUrls.forEach(function (url) { URL.revokeObjectURL(url); });
+        localPhotoUrls = Array.prototype.map.call(files, function (file) { return URL.createObjectURL(file); });
+        photoIndex = 0;
+        var layer = document.getElementById("photoLayer");
+        function renderLocal() {
+          layer.innerHTML = "<img alt=\"Local photo\" src=\"" + localPhotoUrls[photoIndex] + "\">";
+          layer.className = "";
+          photoIndex = (photoIndex + 1) % localPhotoUrls.length;
+        }
+        renderLocal();
+        photoTimer = setInterval(renderLocal, 15000);
+        setPhotoStatus("Local Photos ON • " + localPhotoUrls.length + " selected");
       };
 
       var returnedToken = new URLSearchParams(window.location.hash.slice(1)).get("access_token");
