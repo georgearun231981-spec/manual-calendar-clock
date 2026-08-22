@@ -442,7 +442,7 @@
       async function renderPhoto() {
         var layer = document.getElementById("photoLayer");
         if (!photoItems.length) return;
-        var response = await fetch(photoItems[photoIndex].mediaFile.baseUrl + "=w1600-h900", {
+        var response = await fetch(photoItems[photoIndex].mediaFile.baseUrl + "=w1600", {
           headers: { Authorization: "Bearer " + accessToken },
         });
         if (!response.ok) throw new Error("Could not load a selected photo (" + response.status + ")");
