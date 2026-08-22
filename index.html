@@ -507,7 +507,7 @@
         });
         if (!response.ok) throw new Error("Could not start Google Photos Picker");
         var session = await response.json();
-        pickerWindow.location.href = session.pickerUri + "/autoclose";
+        pickerWindow.location.href = session.pickerUri;
         setPhotoStatus("Choose photos in Google Photos…");
         await waitForSelection(session.id);
       }
