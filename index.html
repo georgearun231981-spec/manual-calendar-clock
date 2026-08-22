@@ -166,6 +166,17 @@
         transform: translateX(-50%);
         z-index: 3;
       }
+      #pickerLink {
+        position: fixed;
+        top: 10vh;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 3;
+        color: #fff;
+        background: #333;
+        padding: 0.7rem 1rem;
+        border-radius: 0.5rem;
+      }
       @media (orientation: landscape) {
         #screen {
           padding: 27vh 6vw 3vh;
@@ -240,6 +251,7 @@
   </div>
 
   <button id="photoButton" onclick="togglePhotos()">Photos</button>
+  <a id="pickerLink" class="hidden" target="_blank" rel="noopener">Open Google Photos Picker</a>
 
   <div id="panel" class="panel">
     <button onclick="startMinutes(60)">School 1h</button><button onclick="startUntil('22:00')">Till 10 PM</button><button onclick="startUntil('01:30')">Till 1:30 AM</button><button onclick="startMinutes(30)">30 min</button><button onclick="stopSession()">Stop</button>
@@ -506,8 +518,10 @@
         });
         if (!response.ok) throw new Error("Could not start Google Photos Picker");
         var session = await response.json();
-        pickerWindow.location.href = session.pickerUri;
-        setPhotoStatus("Choose photos in Google Photos…");
+        var pickerLink = document.getElementById("pickerLink");
+        pickerLink.href = session.pickerUri;
+        pickerLink.className = "";
+        setPhotoStatus("Tap Open Google Photos Picker, choose photos, then tap Done");
         await waitForSelection(session.id);
       }
 
