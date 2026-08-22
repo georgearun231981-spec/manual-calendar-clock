@@ -1,0 +1,7 @@
+name = "day-clock-google-oauth"
+main = "src/index.js"
+compatibility_date = "2026-08-22"
+
+[vars]
+APP_URL = "https://georgearun231981-spec.github.io/manual-calendar-clock/"
+GOOGLE_CLIENT_ID = "31995329705-vggjceajqd5nvf63dj0mub17dl6aq2bc.apps.googleusercontent.com"
