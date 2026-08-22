@@ -511,6 +511,11 @@
           client_id: clientId,
           scope: scope,
           callback: function (response) {
+            if (response.error || !response.access_token) {
+              pickerWindow.close();
+              setPhotoStatus("Google sign-in was cancelled or blocked");
+              return;
+            }
             startPicker(response.access_token, pickerWindow).catch(function (error) {
               pickerWindow.close();
               setPhotoStatus("Photos unavailable • " + error.message);
