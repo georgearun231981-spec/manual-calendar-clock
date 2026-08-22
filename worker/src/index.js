@@ -3,9 +3,9 @@ const GOOGLE_AUTHORIZE = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN = "https://oauth2.googleapis.com/token";
 
 function redirect(url, cookies = []) {
-  const response = Response.redirect(url, 302);
-  cookies.forEach((cookie) => response.headers.append("Set-Cookie", cookie));
-  return response;
+  const headers = new Headers({ Location: url });
+  cookies.forEach((cookie) => headers.append("Set-Cookie", cookie));
+  return new Response(null, { status: 302, headers });
 }
 
 export default {
