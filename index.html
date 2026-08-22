@@ -147,11 +147,11 @@
         }
         .dayPeriod {
           font-size: 6.6vw;
-          margin-bottom: 4vh;
+          margin-bottom: 6.5vh;
         }
         .timeLine {
           font-size: 11.4vw;
-          margin-bottom: 4vh;
+          margin-bottom: 6.5vh;
         }
         .ampm {
           font-size: 3.6vw;
@@ -198,10 +198,6 @@
 
     <div id="dateLine" class="dateLine hidden">
       15 AUGUST 2026
-    </div>
-
-    <div id="fullDateLine" class="fullDateLine hidden">
-      SATURDAY, 15 AUGUST 2026
     </div>
 
     <div id="offMessage" class="offMessage">
@@ -275,7 +271,6 @@
           show("dayPeriod", yes);
           show("timeLine", yes);
           show("dateLine", yes);
-          show("fullDateLine", yes);
           show("offMessage", !yes);
           document.body.className = yes ? "" : "off";
         }
@@ -352,15 +347,6 @@
             ampm +
             "<\/span>";
           document.getElementById("dateLine").innerHTML = (
-            date +
-            " " +
-            month +
-            " " +
-            year
-          ).toUpperCase();
-          document.getElementById("fullDateLine").innerHTML = (
-            day +
-            ", " +
             date +
             " " +
             month +
