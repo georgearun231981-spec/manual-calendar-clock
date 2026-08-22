@@ -12,6 +12,8 @@
   <title>Manual Calendar Clock</title>
   <script src="https://cdn.jsdelivr.net/npm/nosleep.js@0.12.0/dist/NoSleep.min.js" type="text/javascript">
 </script>
+  <script src="https://accounts.google.com/gsi/client" type="text/javascript">
+</script>
   <style type="text/css">
     html,
       body {
@@ -137,6 +139,24 @@
       .hidden {
         display: none !important;
       }
+      #photoLayer {
+        position: fixed;
+        left: 8vw;
+        right: 8vw;
+        bottom: 8vh;
+        height: 20vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border-radius: 1.2vw;
+        background: #111;
+      }
+      #photoLayer img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
       @media (orientation: landscape) {
         #screen {
           padding: 27vh 6vw 3vh;
@@ -211,7 +231,7 @@
   </div>
 
   <div id="panel" class="panel">
-    <button onclick="startMinutes(60)">School 1h</button><button onclick="startUntil('22:00')">Till 10 PM</button><button onclick="startUntil('01:30')">Till 1:30 AM</button><button onclick="startMinutes(30)">30 min</button><button onclick="stopSession()">Stop</button>
+    <button onclick="startMinutes(60)">School 1h</button><button onclick="startUntil('22:00')">Till 10 PM</button><button onclick="startUntil('01:30')">Till 1:30 AM</button><button onclick="startMinutes(30)">30 min</button><button onclick="togglePhotos()">Photos</button><button onclick="stopSession()">Stop</button>
   </div><script type="text/javascript">
     (function () {
         var dayNames = [
@@ -401,6 +421,105 @@
             updateClock();
         });
       })();
+  </script>
+  <div id="photoLayer" class="hidden" aria-live="polite"></div>
+  <script type="text/javascript">
+    (function () {
+      var clientId = "31995329705-vggjceajqd5nvf63dj0mub17dl6aq2bc.apps.googleusercontent.com";
+      var scope = "https://www.googleapis.com/auth/photospicker.mediaitems.readonly";
+      var accessToken = null;
+      var photoItems = [];
+      var photoIndex = 0;
+      var photoTimer = null;
+
+      function setPhotoStatus(message) {
+        document.getElementById("status").innerHTML = message;
+      }
+
+      function renderPhoto() {
+        var layer = document.getElementById("photoLayer");
+        if (!photoItems.length) return;
+        layer.innerHTML = "";
+        var image = document.createElement("img");
+        image.alt = "Selected Google Photos image";
+        image.src = photoItems[photoIndex].mediaFile.baseUrl + "=w1600-h900";
+        layer.appendChild(image);
+        layer.className = "";
+        photoIndex = (photoIndex + 1) % photoItems.length;
+      }
+
+      async function listSelectedPhotos(sessionId) {
+        var response = await fetch("https://photospicker.googleapis.com/v1/mediaItems?sessionId=" + encodeURIComponent(sessionId), {
+          headers: { Authorization: "Bearer " + accessToken },
+        });
+        if (!response.ok) throw new Error("Could not read selected photos");
+        var result = await response.json();
+        photoItems = result.mediaItems || [];
+        if (!photoItems.length) throw new Error("No photos were selected");
+        renderPhoto();
+        clearInterval(photoTimer);
+        photoTimer = setInterval(renderPhoto, 15000);
+        setPhotoStatus("Photos ON • " + photoItems.length + " selected");
+      }
+
+      async function waitForSelection(sessionId) {
+        for (var attempt = 0; attempt < 60; attempt += 1) {
+          await new Promise(function (resolve) { setTimeout(resolve, 2000); });
+          var response = await fetch("https://photospicker.googleapis.com/v1/sessions/" + encodeURIComponent(sessionId), {
+            headers: { Authorization: "Bearer " + accessToken },
+          });
+          if (!response.ok) throw new Error("Could not check the Google Photos session");
+          var session = await response.json();
+          if (session.mediaItemsSet) return listSelectedPhotos(sessionId);
+        }
+        throw new Error("Google Photos selection timed out");
+      }
+
+      async function startPicker(token, pickerWindow) {
+        accessToken = token;
+        var response = await fetch("https://photospicker.googleapis.com/v1/sessions", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        if (!response.ok) throw new Error("Could not start Google Photos Picker");
+        var session = await response.json();
+        pickerWindow.location.href = session.pickerUri + "/autoclose";
+        setPhotoStatus("Choose photos in Google Photos…");
+        await waitForSelection(session.id);
+      }
+
+      window.togglePhotos = function () {
+        var layer = document.getElementById("photoLayer");
+        if (layer.className.indexOf("hidden") < 0) {
+          layer.className = "hidden";
+          clearInterval(photoTimer);
+          setPhotoStatus("Photos OFF");
+          return;
+        }
+        var pickerWindow = window.open("about:blank", "google-photos-picker");
+        if (!pickerWindow) {
+          setPhotoStatus("Allow pop-ups to choose photos");
+          return;
+        }
+        if (!window.google || !google.accounts || !google.accounts.oauth2) {
+          pickerWindow.close();
+          setPhotoStatus("Google sign-in is still loading");
+          return;
+        }
+        var tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: scope,
+          callback: function (response) {
+            startPicker(response.access_token, pickerWindow).catch(function (error) {
+              pickerWindow.close();
+              setPhotoStatus("Photos unavailable • " + error.message);
+            });
+          },
+        });
+        tokenClient.requestAccessToken();
+      };
+    })();
   </script>
 </body>
 </html>
