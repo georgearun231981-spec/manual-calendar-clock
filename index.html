@@ -529,6 +529,7 @@
         var layer = document.getElementById("photoLayer");
         if (layer.className.indexOf("hidden") < 0) {
           layer.className = "hidden";
+          document.getElementById("pickerLink").className = "hidden";
           clearInterval(photoTimer);
           setPhotoStatus("Photos OFF");
           return;
