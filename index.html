@@ -159,6 +159,13 @@
         position: relative;
         z-index: 1;
       }
+      #photoButton {
+        position: fixed;
+        top: 1.5vh;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 3;
+      }
       @media (orientation: landscape) {
         #screen {
           padding: 27vh 6vw 3vh;
@@ -232,8 +239,10 @@
     Manual clock mode
   </div>
 
+  <button id="photoButton" onclick="togglePhotos()">Photos</button>
+
   <div id="panel" class="panel">
-    <button onclick="startMinutes(60)">School 1h</button><button onclick="startUntil('22:00')">Till 10 PM</button><button onclick="startUntil('01:30')">Till 1:30 AM</button><button onclick="startMinutes(30)">30 min</button><button onclick="togglePhotos()">Photos</button><button onclick="stopSession()">Stop</button>
+    <button onclick="startMinutes(60)">School 1h</button><button onclick="startUntil('22:00')">Till 10 PM</button><button onclick="startUntil('01:30')">Till 1:30 AM</button><button onclick="startMinutes(30)">30 min</button><button onclick="stopSession()">Stop</button>
   </div><script type="text/javascript">
     (function () {
         var dayNames = [
