@@ -431,18 +431,26 @@
       var photoItems = [];
       var photoIndex = 0;
       var photoTimer = null;
+      var photoObjectUrl = null;
 
       function setPhotoStatus(message) {
         document.getElementById("status").innerHTML = message;
       }
 
-      function renderPhoto() {
+      async function renderPhoto() {
         var layer = document.getElementById("photoLayer");
         if (!photoItems.length) return;
+        var response = await fetch(photoItems[photoIndex].mediaFile.baseUrl + "=w1600-h900", {
+          headers: { Authorization: "Bearer " + accessToken },
+        });
+        if (!response.ok) throw new Error("Could not load a selected photo (" + response.status + ")");
+        var imageBlob = await response.blob();
+        if (photoObjectUrl) URL.revokeObjectURL(photoObjectUrl);
+        photoObjectUrl = URL.createObjectURL(imageBlob);
         layer.innerHTML = "";
         var image = document.createElement("img");
         image.alt = "Selected Google Photos image";
-        image.src = photoItems[photoIndex].mediaFile.baseUrl + "=w1600-h900";
+        image.src = photoObjectUrl;
         layer.appendChild(image);
         layer.className = "";
         photoIndex = (photoIndex + 1) % photoItems.length;
@@ -456,9 +464,13 @@
         var result = await response.json();
         photoItems = result.mediaItems || [];
         if (!photoItems.length) throw new Error("No photos were selected");
-        renderPhoto();
+        await renderPhoto();
         clearInterval(photoTimer);
-        photoTimer = setInterval(renderPhoto, 15000);
+        photoTimer = setInterval(function () {
+          renderPhoto().catch(function (error) {
+            setPhotoStatus("Photos unavailable • " + error.message);
+          });
+        }, 15000);
         setPhotoStatus("Photos ON • " + photoItems.length + " selected");
       }
 
