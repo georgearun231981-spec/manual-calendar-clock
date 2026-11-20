@@ -100,7 +100,7 @@
         position: fixed;
         left: 0;
         right: 0;
-        bottom: 1.3vh;
+        bottom: calc(1.3vh + 3px);
         display: flex;
         gap: 1.5vw;
         justify-content: center;
@@ -108,6 +108,30 @@
         flex-wrap: wrap;
         padding: 0 2vw;
       }
+      .panel button {
+        position: relative;
+        min-height: 36px;
+        padding: 0 1vw 8px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        color: #fff;
+      }
+      .panel button::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 3px;
+        border-radius: 2px;
+        background: var(--bar-color);
+      }
+      .panel button[data-color="green"] { --bar-color: #34a853; }
+      .panel button[data-color="yellow"] { --bar-color: #fbbc04; }
+      .panel button[data-color="orange"] { --bar-color: #f57c00; }
+      .panel button[data-color="red"] { --bar-color: #ea4335; }
+      .panel button[data-color="neutral"] { --bar-color: #aaa; }
       button {
         font-size: 2.7vw;
         font-weight: 800;
@@ -203,7 +227,7 @@
           font-size: 2.6vw;
         }
         .panel {
-          bottom: 1.1vh;
+          bottom: calc(1.1vh + 3px);
         }
         .status {
           font-size: 1.35vw;
@@ -252,7 +276,7 @@
   <a id="pickerLink" class="hidden" target="_blank" rel="noopener">Open Google Photos Picker</a>
 
   <div id="panel" class="panel">
-    <button onclick="startMinutes(60)">School 1h</button><button onclick="startUntil('22:00')">Till 10 PM</button><button onclick="startUntil('01:30')">Till 1:30 AM</button><button onclick="startMinutes(30)">30 min</button><button onclick="stopSession()">Stop</button>
+    <button data-color="green" onclick="startMinutes(30)">30 min</button><button data-color="yellow" onclick="startMinutes(60)">School 1h</button><button data-color="orange" onclick="startUntil('22:00')">Till 10 PM</button><button data-color="red" onclick="startUntil('01:30')">Till 1:30 AM</button><button data-color="neutral" onclick="stopSession()">Stop</button>
   </div><script type="text/javascript">
     (function () {
         var dayNames = [
@@ -441,6 +465,7 @@
           if (document.visibilityState === "visible" && Date.now() < sessionEnd)
             updateClock();
         });
+        window.startUntil("01:30");
       })();
   </script>
   <div id="photoLayer" class="hidden" aria-live="polite"></div>
